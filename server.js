@@ -69,6 +69,24 @@ if (!fs.existsSync(tokenPath)) {
 const tokens = JSON.parse(fs.readFileSync(tokenPath));
 oauth2Client.setCredentials(tokens);
 
+// Auto-refresh access token if expired
+oauth2Client.getAccessToken().catch(async () => {
+  try {
+    const newTokens = await oauth2Client.refreshAccessToken();
+    oauth2Client.setCredentials(newTokens.credentials);
+
+    // Save new tokens to tokens.json
+    fs.writeFileSync(tokenPath, JSON.stringify(newTokens.credentials));
+    console.log('♻️ Tokens refreshed automatically!');
+  } catch (refreshErr) {
+    console.error('🔁 Token refresh failed:', refreshErr);
+    return res.status(401).json({
+      error: true,
+      message: 'Token expired & refresh failed. Please authenticate again at /auth',
+    });
+  }
+});
+
 
     const videoFile = req.files.video[0];
     const jsonFile = req.files.json[0];
